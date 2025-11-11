@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 
 # --- 1. KONFIGURASI ---
-# (Nilai-nilai ini telah diisi sesuai permintaan Anda)
 
 # Lokasi file log SSH
 # Ubuntu/Debian: '/var/log/auth.log'
@@ -40,7 +39,7 @@ def setup_gemini():
         return None
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-2.5-flash') # Model yang umum digunakan
+        model = genai.GenerativeModel('gemini-2.5-flash') 
         return model
     except Exception as e:
         print(f"Error konfigurasi Gemini: {e}")
