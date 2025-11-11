@@ -11,8 +11,6 @@ GEMINI_API_KEY = "AIzaSyB0cO9dUN8sa1Qn50978sotvq2dxs_uu2o"
 FONNTE_TOKEN = "9CLzM1EFKzAHsETYDcpb"
 TARGET_WA = "6285342888992"  # Nomor WhatsApp tujuan
 SSH_HOST = "103.59.94.80"    # Server yang dimonitor
-SSH_USER = os.environ.get('SSH_USER', 'admin')  # Default untuk demo
-SSH_PASS = os.environ.get('SSH_PASS', 'password123')  # Default untuk demo
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel(model_name="gemini-2.5-flash")
@@ -22,16 +20,22 @@ def get_ssh_attempts(minutes_to_check=10, failure_threshold=3):
     """
     Menghubungkan ke server dan memeriksa log.
     Hanya mengembalikan log jika jumlah kegagalan > threshold dalam X menit terakhir.
-    Returns: (log_lines, status_message, failure_count)
     """
+    # Untuk demo, hardcoded; untuk production, ambil dari os.environ
+    username = os.environ.get('SSH_USER', 'admin')  # Default untuk demo
+    password = os.environ.get('SSH_PASS', 'password123')  # Default untuk demo
+    
     # Perintah ini mengambil 100 kegagalan terakhir untuk dianalisis
     command = "grep 'Failed password' /var/log/auth.log | tail -n 100"
+
+    if not username or not password:
+        return None, "Error: SSH_USER atau SSH_PASS tidak diatur di Jenkins."
 
     try:
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        print(f"Mencoba terhubung ke {SSH_HOST} sebagai {SSH_USER}...")
-        client.connect(SSH_HOST, username=SSH_USER, password=SSH_PASS, timeout=10)
+        print(f"Mencoba terhubung ke {SSH_HOST} sebagai {username}...")
+        client.connect(SSH_HOST, username=username, password=password, timeout=10)
         
         stdin, stdout, stderr = client.exec_command(command)
         
@@ -40,11 +44,11 @@ def get_ssh_attempts(minutes_to_check=10, failure_threshold=3):
         client.close()
         
         if error_data:
-            return None, f"Error saat eksekusi perintah di server: {error_data}", 0
+            return None, f"Error saat eksekusi perintah di server: {error_data}"
         if not log_data:
-            return None, "(Tidak ada cobaan login yang gagal)", 0
+            return None, "(Tidak ada cobaan login yang gagal)"
 
-        # --- LOGIKA: PARSING DAN HITUNG ---
+        # --- LOGIKA BARU: PARSING DAN HITUNG ---
         recent_failures_lines = []
         failure_count = 0
         now = datetime.now()
@@ -73,84 +77,58 @@ def get_ssh_attempts(minutes_to_check=10, failure_threshold=3):
                 # Lewati baris jika formatnya aneh
                 print(f"Gagal mem-parsing baris: {line} | Error: {e}")
                 continue
+        # --- AKHIR LOGIKA BARU ---
 
         # Periksa apakah jumlahnya melebihi batas
         if failure_count >= failure_threshold:
             # Jika YA, kembalikan log untuk dikirim
             log_output = "\n".join(recent_failures_lines)
-            return log_output, f"TERDETEKSI! {failure_count} kegagalan dalam {minutes_to_check} menit terakhir.", failure_count
+            return log_output, f"TERDETEKSI! {failure_count} kegagalan dalam {minutes_to_check} menit terakhir."
         else:
             # Jika TIDAK, kembalikan 'None'
-            return None, f"Aman. Hanya {failure_count} kegagalan (di bawah batas {failure_threshold}).", failure_count
+            return None, f"Aman. Hanya {failure_count} kegagalan (di bawah batas {failure_threshold})."
 
-    except paramiko.AuthenticationException as e:
-        return None, f"🚨 Autentikasi SSH gagal ke {SSH_HOST}: {e}", 0
-    except paramiko.SSHException as e:
-        return None, f"🚨 SSH error ke {SSH_HOST}: {e}", 0
     except Exception as e:
-        return None, f"🚨 Gagal terhubung ke server SSH {SSH_HOST}: {e}", 0
+        return None, f"🚨 Gagal terhubung ke server SSH {SSH_HOST}: {e}"
 
 def get_gemini_analysis(log_text):
-    """Minta analisis brute force attack dari Gemini"""
     try:
-        response = model.generate_content(
-            f"Ada serangan brute force terdeteksi dengan log:\n{log_text}\n\n"
-            "Apa yang sebaiknya saya lakukan? (responnya singkat dan jelas, max 3 baris)"
-        )
+        response = model.generate_content(f"Ada serangan brute force terdeteksi dengan log:\n{log_text}\n\nApa yang sebaiknya saya lakukan? (responnya singkat dan jelas)")
         return response.text
     except Exception as e:
         return f"🚨 Gagal mendapatkan analisis dari Gemini: {e}"
 
 def send_whatsapp(message):
-    """Kirim pesan WhatsApp via Fonnte API"""
     payload = {
         "target": TARGET_WA,
         "message": message,
     }
     headers = {"Authorization": FONNTE_TOKEN}
     try:
-        r = requests.post("https://api.fonnte.com/send", data=payload, headers=headers, timeout=10)
-        if r.status_code == 200:
-            print(f"✅ WhatsApp berhasil dikirim (status {r.status_code})")
-        else:
-            print(f"⚠ WhatsApp API returned status {r.status_code}: {r.text}")
+        r = requests.post("https://api.fonnte.com/send", data=payload, headers=headers)
         return r.status_code
     except Exception as e:
-        print(f"Gagal mengirim WA: {e}")
-        return None
+        return f"Gagal mengirim WA: {e}"
 
-# --- EKSEKUSI UTAMA ---
-def main():
-    print("=" * 60)
-    print("Memulai skrip monitor SSH Brute Force...")
-    print(f"Target: {SSH_HOST} | Threshold: 3 gagal dalam 1 menit")
-    print("=" * 60)
+# --- EKSEKUSI UTAMA (DIMODIFIKASI) ---
+print("Memulai skrip monitor...")
 
-    # Jalankan fungsi dengan batas 3 kegagalan dalam 1 menit
-    log_lines, status_message, failure_count = get_ssh_attempts(minutes_to_check=1, failure_threshold=3)
+# Jalankan fungsi dengan batas 3 kegagalan dalam 1 menit
+# Anda bisa ubah angkanya: (minutes_to_check=10, failure_threshold=3)
+log_lines, status_message = get_ssh_attempts(minutes_to_check=1, failure_threshold=3)
 
-    print(status_message)
+print(status_message) # Ini akan mencetak "Aman..." atau "TERDETEKSI!..."
 
-    # Hanya kirim notifikasi jika 'log_lines' TIDAK kosong
-    # (artinya batas 3 kegagalan terlampaui)
-    if log_lines:
-        print("\n🔴 Batas terlampaui. Menganalisis dengan Gemini...")
-        ai_response = get_gemini_analysis(log_lines)
-        print(f"Analisis Gemini:\n{ai_response}\n")
-        
-        full_message = (
-            f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ⚠ DETEKSI BRUTE FORCE!\n\n"
-            f"Jumlah Kegagalan: {failure_count}\n"
-            f"Server: {SSH_HOST}\n\n"
-            f"Log Terbaru:\n{log_lines}\n\n"
-            f"Rekomendasi Gemini:\n{ai_response}"
-        )
-        
-        print("Mengirim notifikasi WhatsApp...")
-        status = send_whatsapp(full_message)
-        print(f"Status pengiriman WhatsApp: {status}")
-    else:
-        print("✅ Melewatkan notifikasi (level ancaman rendah).")
-
-if __name__ == "__main__":
-    main()
+# Hanya kirim notifikasi jika 'log_lines' TIDAK kosong
+# (artinya batas 3 kegagalan terlampaui)
+if log_lines:
+    print("Batas terlampaui. Menganalisis dengan Gemini...")
+    ai_response = get_gemini_analysis(log_lines)
+    
+    full_message = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ⚠ DETEKSI BRUTE FORCE! (>3x Gagal)\n\n{log_lines}\n\nGemini says:\n{ai_response}"
+    
+    print("Mengirim notifikasi WhatsApp...")
+    status = send_whatsapp(full_message)
+    print(f"Status pengiriman WhatsApp: {status}")
+else:
+    print("Melewatkan notifikasi (level ancaman rendah).")
