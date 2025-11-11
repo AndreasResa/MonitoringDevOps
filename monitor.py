@@ -150,7 +150,7 @@ def main():
             print(f"Mendapatkan analisis dari Gemini untuk IP {ip}...")
             analysis_result = analyze_with_gemini(gemini_model, log_str)
             
-            header = f"🚨 PERINGATAN BRUTE FORCE SSH 🚨\n\n"
+            header = f"PERINGATAN DARI SERVER\n\n"
             details = f"IP Asal: {ip}\nJumlah Percobaan: {count}\nRentang Waktu: {TIME_WINDOW_MINUTES} menit terakhir\n\n"
             gemini_section = f"🤖 Analisis Gemini:\n{analysis_result}"
             
