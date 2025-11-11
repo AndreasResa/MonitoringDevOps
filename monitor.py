@@ -10,10 +10,10 @@ from datetime import datetime, timedelta # Untuk memeriksa waktu
 # Jika tidak ada, pakai "default" (tapi ini tidak aman untuk produksi)
 GEMINI_API_KEY = os.environ.get('GEMINI_KEY', " AIzaSyB0cO9dUN8sa1Qn50978sotvq2dxs_uu2o")
 FONNTE_TOKEN = os.environ.get('FONNTE_TOKEN', "9CLzM1EFKzAHsETYDcpb")
-TARGET_WA = os.environ.get('TARGET_WA', "NOMOR_HP_ANDA") # GANTI DENGAN NOMOR HP ANDA
+TARGET_WA = os.environ.get('TARGET_WA', "6285342888992") # GANTI DENGAN NOMOR HP ANDA
 
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+model = genai.GenerativeModel(model_name="gemini-2.5-flash")
 
 # --- Fungsi Baru yang Lebih Pintar ---
 def get_ssh_attempts(minutes_to_check=10, failure_threshold=3):
@@ -46,7 +46,7 @@ def get_ssh_attempts(minutes_to_check=10, failure_threshold=3):
         if error_data:
             return None, f"Error saat eksekusi perintah di server: {error_data}"
         if not log_data:
-            return None, "(Tidak ada percobaan login yang gagal)"
+            return None, "(Tidak ada cobaan login yang gagal)"
 
         # --- LOGIKA BARU: PARSING DAN HITUNG ---
         recent_failures_lines = []

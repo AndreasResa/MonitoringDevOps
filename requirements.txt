@@ -1,0 +1,3 @@
+google-generative-ai
+paramiko
+requests
