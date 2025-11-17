@@ -15,7 +15,7 @@ LOG_FILE_PATH = '/var/log/auth.log'
 # Jendela waktu untuk diperiksa (dalam menit)
 TIME_WINDOW_MINUTES = 5
 
-# Ambang batas kegagalan sebelum memicu peringatan
+# Ambang batas kegagalan
 FAILURE_THRESHOLD = 2
 
 # Kunci API dan Konfigurasi
