@@ -20,7 +20,7 @@ FAILURE_THRESHOLD = 2
 
 # Kunci API dan Konfigurasi
 GEMINI_API_KEY = 'AIzaSyB0cO9dUN8sa1Qn50978sotvq2dxs_uu2o'  
-FONNTE_API_TOKEN = 'nfbEAvLQgK3AmHnKRQoZ'     
+FONNTE_API_TOKEN = 'letak_token_fonnte_anda_di_sini'     
 YOUR_PHONE_NUMBER = '6285342888992'
 
 LOG_PATTERN = re.compile(
